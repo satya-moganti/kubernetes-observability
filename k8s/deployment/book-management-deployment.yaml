@@ -1,0 +1,106 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: book-management-app
+  namespace: default
+  labels:
+    app: book-management-app
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: book-management-app
+
+  template:
+    metadata:
+      labels:
+        app: book-management-app
+
+    spec:
+      containers:
+        - name: book-management-app
+          image: book-management-app:1.0
+          imagePullPolicy: IfNotPresent
+
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+
+          env:
+            # -----------------------------------
+            # OpenTelemetry
+            # -----------------------------------
+            - name: OTEL_SERVICE_NAME
+              value: "book-management-app"
+
+            - name: OTEL_SERVICE_VERSION
+              value: "1.0.0"
+
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "http://alloy-otel.monitoring.svc.cluster.local:4317"
+
+            - name: OTEL_EXPORTER_OTLP_PROTOCOL
+              value: "grpc"
+
+            # Send traces to Alloy
+            - name: OTEL_TRACES_EXPORTER
+              value: "otlp"
+
+            # Send metrics to Alloy
+            - name: OTEL_METRICS_EXPORTER
+              value: "otlp"
+
+            # Optional until you configure OTel log export
+            - name: OTEL_LOGS_EXPORTER
+              value: "otlp"
+
+            - name: OTEL_RESOURCE_ATTRIBUTES
+              value: "service.name=book-management-app,service.version=1.0.0,deployment.environment=kubernetes"
+
+            # -----------------------------------
+            # OTLP timeout/batching
+            # -----------------------------------
+            - name: OTEL_EXPORTER_OTLP_TIMEOUT
+              value: "10000"
+
+            - name: OTEL_BSP_MAX_EXPORT_BATCH_SIZE
+              value: "512"
+
+            - name: OTEL_BSP_SCHEDULE_DELAY
+              value: "5000"
+
+            # -----------------------------------
+            # JVM
+            # -----------------------------------
+            - name: JAVA_TOOL_OPTIONS
+              value: "-Xms256m -Xmx512m"
+
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+              scheme: HTTP
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+              scheme: HTTP
+            initialDelaySeconds: 30
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
+
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "1"
+              memory: "1Gi"

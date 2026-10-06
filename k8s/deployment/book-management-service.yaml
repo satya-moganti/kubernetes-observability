@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: book-management-app
+  namespace: default
+  labels:
+    app: book-management-app
+spec:
+  type: ClusterIP
+
+  selector:
+    app: book-management-app
+
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8080
+      targetPort: 8080
